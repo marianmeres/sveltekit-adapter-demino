@@ -1,42 +1,43 @@
-# sv
+# Example SvelteKit App
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A bare-bones SvelteKit app wired to use `@marianmeres/sveltekit-adapter-demino`.
+Used for testing and demonstrating the adapter.
 
-## Creating a project
+## How it works
 
-If you're seeing this, you've probably already done this step. Congrats!
+- `svelte.config.js` imports the adapter from `@marianmeres/sveltekit-adapter-demino`
+- `package.json` links the adapter locally via `file:../../.npm-dist`
+- `vite build` produces `build/handler.js` which is imported by `../server.ts`
 
-```sh
-# create a new project
-npx sv create my-app
+## Build & Run
+
+```bash
+# 1. Build the adapter as an npm package (from project root)
+deno task npm:build
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Build the SvelteKit app
+pnpm build
+
+# 4. Run the Deno server (from example/)
+cd .. && deno run -A server.ts
 ```
 
-To recreate this project with the same configuration:
+Then open:
+- http://localhost:9999/ -- SvelteKit pages
+- http://localhost:9999/api/hello -- demino API endpoint
 
-```sh
-# recreate this project
-pnpm dlx sv@0.12.5 create --template minimal --types ts --install pnpm client
-```
+## Routes
 
-## Developing
+- `/` -- Home page
+- `/about` -- About page
+- `/contact` -- Contact page
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Notes
 
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- After changing adapter source, re-run `deno task npm:build` from the project
+  root, then `pnpm install && pnpm build` here to pick up the changes.
+- The Deno server at `../server.ts` composes a demino API (`/api/*`) with the
+  SvelteKit handler (everything else).
