@@ -1,0 +1,1 @@
+# @marianmeres/sveltekit-adapter-demino
