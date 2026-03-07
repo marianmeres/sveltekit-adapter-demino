@@ -1,11 +1,32 @@
 import { writeFileSync } from "node:fs";
 import type { Adapter, Builder } from "@sveltejs/kit";
 
+/**
+ * Configuration options for the SvelteKit Demino adapter.
+ */
 export interface AdapterOptions {
-	/** Output directory (default: "build") */
+	/** Output directory for the generated handler and assets. @default "build" */
 	out?: string;
 }
 
+/**
+ * Creates a SvelteKit adapter that produces a Deno-compatible request handler.
+ *
+ * The adapter generates a `handler.js` file (plus `client/` and `server/` directories)
+ * that can be imported by any Deno server using the standard `Deno.ServeHandler` signature,
+ * including {@link https://jsr.io/@marianmeres/demino demino}.
+ *
+ * @param options - Adapter configuration.
+ * @returns A SvelteKit `Adapter` object.
+ *
+ * @example
+ * ```js
+ * // svelte.config.js
+ * import adapter from "@marianmeres/sveltekit-adapter-demino";
+ *
+ * export default { kit: { adapter: adapter({ out: "build" }) } };
+ * ```
+ */
 export default function adapter(options: AdapterOptions = {}): Adapter {
 	const { out = "build" } = options;
 
