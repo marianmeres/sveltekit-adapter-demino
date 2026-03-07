@@ -1,4 +1,4 @@
-import { demino, deminoCompose } from "@marianmeres/demino";
+import { demino, deminoCompose, logListenInfo } from "@marianmeres/demino";
 import { handler as skHandler } from "./sveltekit-app/build/handler.js";
 
 /**
@@ -65,37 +65,7 @@ async function main(): Promise<void> {
 		{
 			port,
 			hostname,
-			onListen({ hostname, port }) {
-				const protocol = "http";
-
-				if (hostname === "0.0.0.0") {
-					console.log("\n ✅ %cDemino listening:", "color:green;");
-					console.log(
-						`    ➜  Local:   %c${protocol}://localhost:${port}/`,
-						"color:cyan;",
-					);
-
-					const interfaces = Deno.networkInterfaces();
-					for (const iface of interfaces) {
-						if (
-							iface.family === "IPv4" &&
-							!iface.address.startsWith("127.")
-						) {
-							console.log(
-								`    ➜  Network: %c${protocol}://${iface.address}:${port}/`,
-								"color:cyan;",
-							);
-						}
-					}
-				} else {
-					console.log(
-						`%cDemino listening: %c${protocol}://${hostname}:${port}/`,
-						"color:green;",
-						"color:cyan;",
-					);
-				}
-				console.log("");
-			},
+			onListen: logListenInfo,
 		},
 		deminoCompose([api, sk]),
 	);
