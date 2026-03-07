@@ -67,6 +67,9 @@ export default function adapter(options: AdapterOptions = {}): Adapter {
 	};
 }
 
+/**
+ * Named export alias for the {@link adapter default} adapter factory.
+ */
 export { adapter };
 
 function generateHandler(manifest: string, redirects: string): string {
