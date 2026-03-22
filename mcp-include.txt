@@ -1,0 +1,1 @@
+SvelteKit adapter that produces a Deno-compatible handler.js at build time, enabling SvelteKit apps to run on Deno via Demino. Handles static assets, prerendered pages, immutable caching, and SSR fallthrough.
