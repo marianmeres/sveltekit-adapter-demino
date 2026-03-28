@@ -119,23 +119,34 @@ export async function handler(req, info) {
 
 	// 2. Serve static assets & prerendered HTML from the client dir.
 	//    Only for GET/HEAD — other methods (POST, PUT, etc.) go straight to SSR.
-	//    Fall through to SSR only on 404/405 — return everything else (200, 304, etc.).
+	//    serveDir returns 405 for HEAD, so we convert HEAD→GET and strip the body.
 	if (req.method === 'GET' || req.method === 'HEAD') {
-		const staticRes = await serveDir(req, {
+		const fileReq = req.method === 'HEAD'
+			? new Request(req.url, { method: 'GET', headers: req.headers })
+			: req;
+		const staticRes = await serveDir(fileReq, {
 			fsRoot: clientDir,
 			quiet: true,
 			enableCors: false,
 		});
 
-		if (staticRes.status !== 404 && staticRes.status !== 405) {
+		if (staticRes.status !== 404) {
+			const isHead = req.method === 'HEAD';
 			// Cache immutable assets (content-hashed by SvelteKit) forever.
 			if (url.pathname.startsWith('/_app/immutable/')) {
 				const headers = new Headers(staticRes.headers);
 				headers.set('Cache-Control', 'public, immutable, max-age=31536000');
-				return new Response(staticRes.body, {
+				return new Response(isHead ? null : staticRes.body, {
 					status: staticRes.status,
 					statusText: staticRes.statusText,
 					headers,
+				});
+			}
+			if (isHead) {
+				return new Response(null, {
+					status: staticRes.status,
+					statusText: staticRes.statusText,
+					headers: staticRes.headers,
 				});
 			}
 			return staticRes;
