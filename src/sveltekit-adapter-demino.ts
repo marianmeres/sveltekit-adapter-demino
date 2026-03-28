@@ -120,6 +120,7 @@ export async function handler(req, info) {
 	// 2. Serve static assets & prerendered HTML from the client dir.
 	//    Only for GET/HEAD — other methods (POST, PUT, etc.) go straight to SSR.
 	//    Fall through on 404 (not found) and 405 (serveDir rejects HEAD for missing files).
+	//    304 Not Modified must also be returned directly (Response.ok is false for 304).
 	if (req.method === 'GET' || req.method === 'HEAD') {
 		const staticRes = await serveDir(req, {
 			fsRoot: clientDir,
@@ -127,7 +128,7 @@ export async function handler(req, info) {
 			enableCors: false,
 		});
 
-		if (staticRes.ok) {
+		if (staticRes.ok || staticRes.status === 304) {
 			// Cache immutable assets (content-hashed by SvelteKit) forever.
 			if (url.pathname.startsWith('/_app/immutable/')) {
 				const headers = new Headers(staticRes.headers);
