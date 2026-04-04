@@ -29,10 +29,20 @@ export default {
   kit: {
     adapter: adapter({
       out: 'build', // default
+      // Cache-Control headers for disk-served static responses.
+      // All values below are defaults — override or set to `false` to disable.
+      cacheControl: {
+        immutable:   'public, immutable, max-age=31536000',          // /_app/immutable/*
+        prerendered: 'public, max-age=600, stale-while-revalidate=86400', // prerendered pages
+        assets:      'public, max-age=86400',                        // unhashed static files
+      },
     }),
   },
 };
 ```
+
+> **Note:** SSR responses are not affected by these settings — use SvelteKit's
+> `handle` hook in `hooks.server.ts` to control caching for server-rendered routes.
 
 ## Build
 
@@ -82,8 +92,16 @@ The generated `handler.js`:
 2. **Static files & prerendered HTML** -- served from `build/client/` using
    `@std/http/file-server`'s `serveDir`. This covers everything in your
    `static/` folder, compiled JS/CSS (`/_app/...`), and prerendered pages.
-   Immutable assets (`/_app/immutable/*`) are served with
-   `Cache-Control: public, immutable, max-age=31536000`.
+   Each response gets a `Cache-Control` header based on its category:
+
+   | Category | Path pattern | Default header |
+   |----------|-------------|----------------|
+   | Immutable | `/_app/immutable/*` | `public, immutable, max-age=31536000` |
+   | Prerendered | Pages from SvelteKit's prerender list | `public, max-age=600, stale-while-revalidate=86400` |
+   | Static assets | Everything else (favicon, fonts, images…) | `public, max-age=86400` |
+
+   Override any value via `cacheControl` in adapter options, or set to `false`
+   to skip setting the header for that category.
 
 3. **Everything else** -- forwarded to SvelteKit's SSR engine via
    `server.respond()`. This handles server routes, SSR pages, and API

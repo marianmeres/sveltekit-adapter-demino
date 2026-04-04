@@ -36,28 +36,46 @@ SvelteKit adapter that produces a Deno-compatible `handler.js` at build time.
 The generated handler:
 1. Handles prerendered trailing-slash redirects (308)
 2. Serves static assets + prerendered HTML via `serveDir`
-3. Sets `Cache-Control: public, immutable, max-age=31536000` for `/_app/immutable/*`
+3. Sets `Cache-Control` headers on all disk-served responses based on three categories:
+   - `/_app/immutable/*` → `public, immutable, max-age=31536000`
+   - Prerendered pages (set embedded at build time from `builder.prerendered.pages`) → `public, max-age=600, stale-while-revalidate=86400`
+   - Unhashed static files (everything else from `static/`) → `public, max-age=86400`
 4. Falls through to SvelteKit SSR via `server.respond()`
 5. Provides `read()` to SvelteKit for `$app/server` asset access
 
 ## Key Types
 
 ```ts
-interface AdapterOptions { out?: string }  // default: "build"
+interface CacheControlOptions {
+  immutable?: string | false;   // default: "public, immutable, max-age=31536000"
+  prerendered?: string | false; // default: "public, max-age=600, stale-while-revalidate=86400"
+  assets?: string | false;      // default: "public, max-age=86400"
+}
+
+interface AdapterOptions {
+  out?: string;                  // default: "build"
+  cacheControl?: CacheControlOptions;
+}
+
+const CACHE_DEFAULTS: Required<CacheControlOptions>  // exported, contains all defaults
+
 function adapter(options?: AdapterOptions): Adapter
 ```
 
 ## Critical Conventions
 
-1. `mod.ts` must `export { default }` AND `export *` — `export *` alone does not
+1. **SSR caching is NOT the adapter's concern.** The adapter only sets `Cache-Control`
+   on disk-served static responses (via `serveDir`). SSR responses pass through
+   `server.respond()` unchanged — use SvelteKit's `handle` hook for those.
+2. `mod.ts` must `export { default }` AND `export *` — `export *` alone does not
    re-export the default export.
-2. The `generateHandler()` function returns a **string template** — it is NOT
+3. The `generateHandler()` function returns a **string template** — it is NOT
    executable code in this package. It gets written to `handler.js` in the build output.
-3. The string template uses `jsr:` specifiers (Deno runtime), while the adapter
+4. The string template uses `jsr:` specifiers (Deno runtime), while the adapter
    source uses `node:` and npm imports (Node/Vite build time).
-4. `@sveltejs/kit` is a **peer dependency** for npm, mapped via `deno.json` imports
+5. `@sveltejs/kit` is a **peer dependency** for npm, mapped via `deno.json` imports
    for Deno.
-5. Build-time deps (`@types/node`, `@sveltejs/kit`) are installed by `npmbuild`
+6. Build-time deps (`@types/node`, `@sveltejs/kit`) are installed by `npmbuild`
    during `npm:build` — they are NOT runtime deps.
 
 ## Build Output Structure
