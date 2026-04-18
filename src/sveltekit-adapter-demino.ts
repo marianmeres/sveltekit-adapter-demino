@@ -33,11 +33,15 @@ export interface AdapterOptions {
 	cacheControl?: CacheControlOptions;
 }
 
-export const CACHE_DEFAULTS = {
+export const CACHE_DEFAULTS: {
+	readonly immutable: string;
+	readonly prerendered: string;
+	readonly assets: string;
+} = {
 	immutable: "public, immutable, max-age=31536000",
 	prerendered: "public, max-age=600, stale-while-revalidate=86400",
 	assets: "public, max-age=86400",
-} as const satisfies Required<CacheControlOptions>;
+};
 
 /**
  * Creates a SvelteKit adapter that produces a Deno-compatible request handler.
