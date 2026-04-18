@@ -33,11 +33,11 @@ export interface AdapterOptions {
 	cacheControl?: CacheControlOptions;
 }
 
-export const CACHE_DEFAULTS: Required<CacheControlOptions> = {
+export const CACHE_DEFAULTS = {
 	immutable: "public, immutable, max-age=31536000",
 	prerendered: "public, max-age=600, stale-while-revalidate=86400",
 	assets: "public, max-age=86400",
-};
+} as const satisfies Required<CacheControlOptions>;
 
 /**
  * Creates a SvelteKit adapter that produces a Deno-compatible request handler.
@@ -67,6 +67,10 @@ export default function adapter(options: AdapterOptions = {}): Adapter {
 
 	return {
 		name: "adapter-demino",
+
+		// Declare that `read` from `$app/server` is supported. Without this,
+		// SvelteKit may warn or error at build time for routes that use it.
+		supports: { read: () => true },
 
 		async adapt(builder: Builder) {
 			const tmp = builder.getBuildDirectory("adapter-demino");
@@ -138,9 +142,9 @@ const clientDir = join(__dir, 'client');
 
 await server.init({
 	env: Deno.env.toObject(),
-	read(file) {
+	async read(file) {
 		try {
-			return Deno.openSync(join(clientDir, file));
+			return (await Deno.open(join(clientDir, file))).readable;
 		} catch {
 			return null;
 		}
@@ -155,7 +159,7 @@ const cacheControl = ${cacheControl};
  * Drop-in SvelteKit request handler for demino (or any Deno.ServeHandler).
  *
  * @param {Request} req
- * @param {Deno.ServeHandlerInfo} info
+ * @param {Deno.ServeHandlerInfo} [info]
  * @returns {Promise<Response>}
  */
 export async function handler(req, info) {
@@ -171,47 +175,32 @@ export async function handler(req, info) {
 	}
 
 	// 2. Serve static assets & prerendered HTML from the client dir.
-	//    Only for GET/HEAD — other methods (POST, PUT, etc.) go straight to SSR.
-	//    serveDir returns 405 for HEAD, so we convert HEAD→GET and strip the body.
+	//    Only for GET/HEAD — other methods go straight to SSR.
+	//    serveDir handles HEAD natively (null body, full headers).
 	if (req.method === 'GET' || req.method === 'HEAD') {
-		const fileReq = req.method === 'HEAD'
-			? new Request(req.url, { method: 'GET', headers: req.headers })
-			: req;
-		const staticRes = await serveDir(fileReq, {
+		const staticRes = await serveDir(req, {
 			fsRoot: clientDir,
 			quiet: true,
 			enableCors: false,
 		});
 
-		if (staticRes.status !== 404) {
-			const isHead = req.method === 'HEAD';
-
-			// Determine which cache category this static response belongs to.
-			let cc = null;
-			if (url.pathname.startsWith('/_app/immutable/')) {
-				cc = cacheControl.immutable;
-			} else if (prerenderedPages.has(url.pathname) || prerenderedPages.has(url.pathname + '/')) {
-				cc = cacheControl.prerendered;
-			} else {
-				cc = cacheControl.assets;
-			}
-
-			if (cc) {
-				const headers = new Headers(staticRes.headers);
-				headers.set('Cache-Control', cc);
-				return new Response(isHead ? null : staticRes.body, {
-					status: staticRes.status,
-					statusText: staticRes.statusText,
-					headers,
-				});
-			}
-
-			if (isHead) {
-				return new Response(null, {
-					status: staticRes.status,
-					statusText: staticRes.statusText,
-					headers: staticRes.headers,
-				});
+		// Pass through to SSR on 404/405. Do not decorate error responses
+		// (>= 400 except 304) with Cache-Control.
+		if (staticRes.status !== 404 && staticRes.status !== 405) {
+			const shouldCache = staticRes.status < 400 || staticRes.status === 304;
+			if (shouldCache) {
+				let cc = null;
+				if (url.pathname.startsWith('/_app/immutable/')) {
+					cc = cacheControl.immutable;
+				} else if (
+					prerenderedPages.has(url.pathname) ||
+					prerenderedPages.has(url.pathname + '/')
+				) {
+					cc = cacheControl.prerendered;
+				} else {
+					cc = cacheControl.assets;
+				}
+				if (cc) staticRes.headers.set('Cache-Control', cc);
 			}
 			return staticRes;
 		}
