@@ -118,16 +118,32 @@ The generated `handler.js`:
   `{ info: Deno.ServeHandlerInfo }`, giving you access to `remoteAddr` etc.
 - The adapter runs in Node.js at build time (it's a Vite plugin). The
   generated `handler.js` runs in Deno at serve time.
-- Your Deno server's `deno.json` needs to map `@sveltejs/kit` as an npm import
-  (the SvelteKit server bundle references it at runtime):
-  ```json
+- Your Deno server needs an import map for the npm packages that SvelteKit's
+  SSR bundle references at runtime. The adapter emits `build/deno-imports.json`
+  listing every bare specifier it found, each pinned to the version installed
+  in your `node_modules`. Point your `deno.json` at it:
+  ```jsonc
+  // deno.json
   {
-    "imports": {
-      "@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0",
-      "@sveltejs/kit/internal": "npm:@sveltejs/kit/internal",
-      "@sveltejs/kit/internal/server": "npm:@sveltejs/kit/internal/server"
-    }
+    "importMap": "./build/deno-imports.json"
   }
+  ```
+  Or copy its `imports` block into your existing `deno.json` `imports`. The
+  file is regenerated on every build and keys are sorted alphabetically, so
+  diffs stay clean.
+
+  Disable emission with `adapter({ denoImports: false })`, or refine via
+  `adapter({ denoImports: { versionPrefix: "exact", exclude: ["tailwind-merge"], extraSpecifiers: ["some-dynamic-pkg"] } })`.
+
+  Caveats:
+  - Dynamic `import(someVar)` with a computed string is invisible to any
+    static scanner — use `extraSpecifiers` to force-add those entries.
+  - A package whose `exports` doesn't list a subpath the SSR bundle actually
+    imports will still error at runtime; no import map can work around that.
+
+  Minimal manual fallback if you skip the generated file entirely:
+  ```json
+  { "imports": { "@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0" } }
   ```
 
 ## License

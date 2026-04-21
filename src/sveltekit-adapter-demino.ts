@@ -1,5 +1,9 @@
 import { writeFileSync } from "node:fs";
 import type { Adapter, Builder } from "@sveltejs/kit";
+import { emitDenoImports } from "./deno-imports.ts";
+import type { DenoImportsOptions } from "./deno-imports.ts";
+
+export type { DenoImportsOptions } from "./deno-imports.ts";
 
 /**
  * Per-category Cache-Control header values.
@@ -31,6 +35,12 @@ export interface AdapterOptions {
 	/** Cache-Control headers for static responses served from disk.
 	 *  SSR responses are not affected — use SvelteKit's `handle` hook for those. */
 	cacheControl?: CacheControlOptions;
+
+	/** Emit `build/deno-imports.json` listing every bare npm specifier the
+	 *  SSR bundle references, pinned to the installed version. Consumers merge
+	 *  it into their `deno.json` or point `importMap` at it. Pass `false` to
+	 *  disable, or an object to override defaults. @default true */
+	denoImports?: boolean | DenoImportsOptions;
 }
 
 export const CACHE_DEFAULTS: {
@@ -62,12 +72,18 @@ export const CACHE_DEFAULTS: {
  * ```
  */
 export default function adapter(options: AdapterOptions = {}): Adapter {
-	const { out = "build", cacheControl: cc = {} } = options;
+	const { out = "build", cacheControl: cc = {}, denoImports = true } = options;
 	const cacheControl = {
 		immutable: cc.immutable ?? CACHE_DEFAULTS.immutable,
 		prerendered: cc.prerendered ?? CACHE_DEFAULTS.prerendered,
 		assets: cc.assets ?? CACHE_DEFAULTS.assets,
 	};
+	const denoImportsOptions: DenoImportsOptions | null =
+		denoImports === false
+			? null
+			: denoImports === true
+				? {}
+				: denoImports;
 
 	return {
 		name: "adapter-demino",
@@ -115,6 +131,16 @@ export default function adapter(options: AdapterOptions = {}): Adapter {
 
 			const handlerSrc = generateHandler(manifest, redirects, prerenderedPages, ccJson);
 			writeFileSync(`${out}/handler.js`, handlerSrc, "utf-8");
+
+			if (denoImportsOptions) {
+				emitDenoImports({
+					serverDir: `${out}/server`,
+					outFile: `${out}/deno-imports.json`,
+					cwd: process.cwd(),
+					log: builder.log,
+					options: denoImportsOptions,
+				});
+			}
 
 			builder.log.minor(`adapter-demino: output written to ./${out}/`);
 		},
@@ -192,21 +218,31 @@ export async function handler(req, info) {
 		// (>= 400 except 304) with Cache-Control.
 		if (staticRes.status !== 404 && staticRes.status !== 405) {
 			const shouldCache = staticRes.status < 400 || staticRes.status === 304;
-			if (shouldCache) {
-				let cc = null;
-				if (url.pathname.startsWith('/_app/immutable/')) {
-					cc = cacheControl.immutable;
-				} else if (
-					prerenderedPages.has(url.pathname) ||
-					prerenderedPages.has(url.pathname + '/')
-				) {
-					cc = cacheControl.prerendered;
-				} else {
-					cc = cacheControl.assets;
-				}
-				if (cc) staticRes.headers.set('Cache-Control', cc);
+			if (!shouldCache) return staticRes;
+
+			let cc = null;
+			if (url.pathname.startsWith('/_app/immutable/')) {
+				cc = cacheControl.immutable;
+			} else if (
+				prerenderedPages.has(url.pathname) ||
+				prerenderedPages.has(url.pathname + '/')
+			) {
+				cc = cacheControl.prerendered;
+			} else {
+				cc = cacheControl.assets;
 			}
-			return staticRes;
+			if (!cc) return staticRes;
+
+			// Response headers from serveDir() are immutable (Fetch spec
+			// guard: "response"), so clone into a fresh Response with a
+			// mutable Headers copy before adding Cache-Control.
+			const headers = new Headers(staticRes.headers);
+			headers.set('Cache-Control', cc);
+			return new Response(staticRes.body, {
+				status: staticRes.status,
+				statusText: staticRes.statusText,
+				headers,
+			});
 		}
 	}
 

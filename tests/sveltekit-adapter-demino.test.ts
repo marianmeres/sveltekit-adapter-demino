@@ -159,3 +159,20 @@ Deno.test("generateHandler: uses native HEAD support (no HEAD→GET rewrite)", a
 	const hasWorkaround = /method:\s*['"]GET['"]/.test(src);
 	assertEquals(hasWorkaround, false, "HEAD→GET workaround should be removed");
 });
+
+Deno.test("generateHandler: never mutates staticRes.headers", async () => {
+	const src = await buildHandlerString();
+	// Response headers from serveDir() are immutable — any .set/.append/.delete
+	// on staticRes.headers throws at runtime.
+	assertEquals(
+		/staticRes\.headers\.(set|append|delete)\b/.test(src),
+		false,
+		"must not mutate staticRes.headers (immutable)",
+	);
+});
+
+Deno.test("generateHandler: clones response when Cache-Control applies", async () => {
+	const src = await buildHandlerString();
+	assertStringIncludes(src, "new Headers(staticRes.headers)");
+	assertStringIncludes(src, "new Response(staticRes.body");
+});
