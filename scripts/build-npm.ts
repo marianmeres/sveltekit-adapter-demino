@@ -6,10 +6,8 @@ await npmBuild({
 	name: denoJson.name,
 	version: denoJson.version,
 	repository: denoJson.name.replace(/^@/, ""),
-	dependencies: versionizeDeps(["@types/node", "@sveltejs/kit"], denoJson),
-	packageJsonOverrides: {
-		peerDependencies: {
-			"@sveltejs/kit": ">=2.0.0",
-		},
+	dependencies: versionizeDeps(["@types/node"], denoJson),
+	peerDependencies: {
+		"@sveltejs/kit": ">=2.0.0",
 	},
 });
