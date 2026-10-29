@@ -1,20 +1,21 @@
 import { demino, deminoCompose, logListenInfo } from "@marianmeres/demino";
+import { serve } from "@marianmeres/demino/deno";
+import { createServer } from "node:net";
+import process from "node:process";
 import { handler as skHandler } from "./sveltekit-app/build/handler.js";
 
 /**
  * Check if a port is available
  */
-async function isPortAvailable(port: number, host: string): Promise<boolean> {
-	try {
-		const listener = Deno.listen({ port, hostname: host });
-		listener.close();
-		return true;
-	} catch (e) {
-		if (e instanceof Deno.errors.AddrInUse) {
-			return false;
-		}
-		throw e;
-	}
+function isPortAvailable(port: number, host: string): Promise<boolean> {
+	return new Promise((resolve, reject) => {
+		const probe = createServer();
+		probe.once("error", (e: Error & { code?: string }) => {
+			if (e.code === "EADDRINUSE") resolve(false);
+			else reject(e);
+		});
+		probe.listen(port, host, () => probe.close(() => resolve(true)));
+	});
 }
 
 /**
@@ -41,8 +42,8 @@ async function findAvailablePort(
 
 async function main(): Promise<void> {
 	const options = {
-		port: parseInt(Deno.env.get("SERVER_PORT") ?? "9999"),
-		hostname: Deno.env.get("SERVER_HOST") || "0.0.0.0",
+		port: parseInt(process.env.SERVER_PORT ?? "9999"),
+		hostname: process.env.SERVER_HOST || "0.0.0.0",
 	};
 
 	// Find available port
@@ -61,14 +62,11 @@ async function main(): Promise<void> {
 	sk.all("/*", skHandler);
 
 	//
-	Deno.serve(
-		{
-			port,
-			hostname,
-			onListen: logListenInfo,
-		},
-		deminoCompose([api, sk]),
-	);
+	await serve(deminoCompose([api, sk]), {
+		port,
+		hostname,
+		onListen: logListenInfo,
+	});
 }
 
 main();

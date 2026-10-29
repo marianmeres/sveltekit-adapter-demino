@@ -1,6 +1,6 @@
 /**
- * SvelteKit adapter for Deno — generates a `handler.js` compatible with
- * {@link https://jsr.io/@marianmeres/demino demino} and any `Deno.ServeHandler` server.
+ * SvelteKit adapter for {@link https://jsr.io/@marianmeres/demino demino} 2.0 — generates
+ * a `(req, info) => Response` `handler.js` that runs on Deno or Node.
  */
 export { default } from "./sveltekit-adapter-demino.ts";
 export * from "./sveltekit-adapter-demino.ts";

@@ -4,9 +4,13 @@
 [![JSR](https://jsr.io/badges/@marianmeres/sveltekit-adapter-demino)](https://jsr.io/@marianmeres/sveltekit-adapter-demino)
 [![License](https://img.shields.io/npm/l/@marianmeres/sveltekit-adapter-demino)](LICENSE)
 
-A SvelteKit adapter that outputs a Web-standard `handler(req, info)` function
-compatible with [`@marianmeres/demino`](https://jsr.io/@marianmeres/demino) and
-any `Deno.ServeHandler`-based server.
+A SvelteKit adapter that outputs a Web-standard `(req, info) => Response` handler
+for [`@marianmeres/demino`](https://jsr.io/@marianmeres/demino) 2.0 on Deno or
+Node. Mount it in a demino app and serve it through the demino adapter of your
+runtime (`@marianmeres/demino/deno` or `@marianmeres/demino/node`).
+
+> **Requires `@marianmeres/demino` ≥ 2.0 at runtime.** The generated handler
+> imports `serveStatic` from it; your server app provides it.
 
 ## Install
 
@@ -17,7 +21,7 @@ npm install -D @marianmeres/sveltekit-adapter-demino
 ```
 
 > The adapter runs at **build time** inside Vite/Node.js. It is not installed via
-> `deno add` — Deno only runs the *generated* `handler.js` at serve time.
+> `deno add` — your Deno or Node server only runs the *generated* `handler.js`.
 
 ## Configure
 
@@ -54,15 +58,19 @@ Output structure:
 
 ```
 build/
-├── handler.js      <- import this in your Deno server
-├── client/         <- static assets + prerendered HTML (served automatically)
-└── server/         <- SvelteKit SSR runtime (used internally by handler.js)
+├── handler.js         <- import this in your demino server
+├── client/            <- static assets + prerendered HTML (served automatically)
+├── server/            <- SvelteKit SSR runtime (used internally by handler.js)
+└── deno-imports.json  <- import map entries for Deno (see Notes)
 ```
 
-## Usage in your Deno server
+## Usage in your server
+
+On Deno:
 
 ```ts
-import { demino, deminoCompose } from 'jsr:@marianmeres/demino';
+import { demino, deminoCompose } from '@marianmeres/demino';
+import { serve } from '@marianmeres/demino/deno';
 import { handler as skHandler } from './build/handler.js';
 
 const api = demino('/api');
@@ -72,14 +80,30 @@ api.get('/hello', () => ({ hello: 'world' }));
 const sk = demino();
 sk.all('/*', skHandler);
 
-Deno.serve(deminoCompose([api, sk]));
+await serve(deminoCompose([api, sk]), { port: 8000 });
+```
+
+`@marianmeres/demino` is a bare specifier here and in `handler.js`, so your
+`deno.json` maps it (e.g. `"@marianmeres/demino": "jsr:@marianmeres/demino@^2"`).
+
+On Node (`npm install @marianmeres/demino`), the same code with the Node adapter:
+
+```js
+import { demino, deminoCompose } from '@marianmeres/demino';
+import { serve } from '@marianmeres/demino/node';
+import { handler as skHandler } from './build/handler.js';
+
+// ... same apps as above
+await serve(deminoCompose([api, sk]), { port: 8000 });
 ```
 
 Or if SvelteKit is your only app:
 
 ```ts
+import { serve } from '@marianmeres/demino/deno'; // or '@marianmeres/demino/node'
 import { handler } from './build/handler.js';
-Deno.serve(handler);
+
+await serve(handler);
 ```
 
 ## How it works
@@ -89,10 +113,11 @@ The generated `handler.js`:
 1. **Prerendered redirects** -- handles trailing-slash normalization (308 redirects)
    for prerendered pages, based on your SvelteKit `trailingSlash` config.
 
-2. **Static files & prerendered HTML** -- served from `build/client/` using
-   `@std/http/file-server`'s `serveDir`. This covers everything in your
-   `static/` folder, compiled JS/CSS (`/_app/...`), and prerendered pages.
-   Each response gets a `Cache-Control` header based on its category:
+2. **Static files & prerendered HTML** -- served from `build/client/` with
+   demino's `serveStatic` (ETag/304, Range, `HEAD`; dotfiles are not served).
+   This covers everything in your `static/` folder, compiled JS/CSS
+   (`/_app/...`), and prerendered pages. A miss (404/405) falls through to SSR.
+   Each hit (200/206/304) gets a `Cache-Control` header based on its category:
 
    | Category | Path pattern | Default header |
    |----------|-------------|----------------|
@@ -115,22 +140,34 @@ The generated `handler.js`:
 
 - Deno permissions needed at runtime: `--allow-net`, `--allow-read`, `--allow-env`
 - The `platform` object available in SvelteKit hooks/endpoints will contain
-  `{ info: Deno.ServeHandlerInfo }`, giving you access to `remoteAddr` etc.
+  `{ info: DeminoServeInfo }` (from `@marianmeres/demino`), giving you access to
+  `remoteAddr` etc. — whatever the runtime adapter provides.
 - The adapter runs in Node.js at build time (it's a Vite plugin). The
-  generated `handler.js` runs in Deno at serve time.
-- Your Deno server needs an import map for the npm packages that SvelteKit's
+  generated `handler.js` uses only web standards, `node:*` built-ins and
+  `@marianmeres/demino`, so it runs on Deno or Node at serve time.
+- On Node, every package the handler and SvelteKit's SSR bundle import resolves
+  from your `node_modules`; nothing else is needed.
+- On Deno, your server needs an import map for the npm packages that SvelteKit's
   SSR bundle references at runtime. The adapter emits `build/deno-imports.json`
   listing every bare specifier it found, each pinned to the version installed
-  in your `node_modules`. Point your `deno.json` at it:
+  in your `node_modules`. Copy its `imports` block into your `deno.json`
+  `imports`, next to your own `@marianmeres/demino` entry:
   ```jsonc
   // deno.json
   {
-    "importMap": "./build/deno-imports.json"
+    "imports": {
+      "@marianmeres/demino": "jsr:@marianmeres/demino@^2",
+      // ...the entries from build/deno-imports.json
+    }
   }
   ```
-  Or copy its `imports` block into your existing `deno.json` `imports`. The
-  file is regenerated on every build and keys are sorted alphabetically, so
-  diffs stay clean.
+  `deno-imports.json` never maps `@marianmeres/demino` — your app's import map
+  (or `package.json`) provides it, and an `npm:` mapping would load a second
+  demino next to your app's own. So pointing `"importMap"` at the generated
+  file alone is not enough: the handler's `@marianmeres/demino` import would
+  not resolve (and Deno ignores `"importMap"` once `"imports"` is present).
+  The file is regenerated on every build and keys are sorted alphabetically,
+  so diffs stay clean.
 
   Disable emission with `adapter({ denoImports: false })`, or refine via
   `adapter({ denoImports: { versionPrefix: "exact", exclude: ["tailwind-merge"], extraSpecifiers: ["some-dynamic-pkg"] } })`.

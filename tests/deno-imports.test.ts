@@ -321,6 +321,46 @@ Deno.test("emitDenoImports: exclude option drops a package", async () => {
 	}
 });
 
+Deno.test("emitDenoImports: never maps @marianmeres/demino (skip list)", async () => {
+	const tmp = await Deno.makeTempDir({ prefix: "deno-imports-skip-" });
+	try {
+		// A resolvable demino install, so only the skip list can keep it out.
+		const pkgDir = join(tmp, "node_modules/@marianmeres/demino");
+		Deno.mkdirSync(pkgDir, { recursive: true });
+		Deno.writeTextFileSync(
+			join(pkgDir, "package.json"),
+			JSON.stringify({ name: "@marianmeres/demino", version: "2.0.0" }),
+		);
+		assert(resolvePackageVersion("@marianmeres/demino", tmp) !== null);
+
+		const serverDir = join(tmp, "server");
+		Deno.mkdirSync(serverDir, { recursive: true });
+		Deno.writeTextFileSync(
+			join(serverDir, "a.js"),
+			`
+				import { serveStatic } from "@marianmeres/demino";
+				import { serve } from "@marianmeres/demino/node";
+			`,
+		);
+		const outFile = join(tmp, "deno-imports.json");
+		const warnings: string[] = [];
+		emitDenoImports({
+			serverDir,
+			outFile,
+			cwd: tmp,
+			log: { minor: () => {}, warn: (m) => warnings.push(m) },
+			// Even a forced specifier does not bring it back.
+			options: { extraSpecifiers: ["@marianmeres/demino"] },
+		});
+		const json = JSON.parse(Deno.readTextFileSync(outFile));
+		assertEquals(json.imports, {});
+		// Skipped, not "unresolved".
+		assertEquals(warnings, []);
+	} finally {
+		await Deno.remove(tmp, { recursive: true });
+	}
+});
+
 Deno.test("emitDenoImports: extraSpecifiers forces inclusion", async () => {
 	const tmp = await Deno.makeTempDir({ prefix: "deno-imports-extra-" });
 	try {

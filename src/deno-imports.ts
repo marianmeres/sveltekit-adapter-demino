@@ -24,6 +24,14 @@ export interface DenoImportsOptions {
 }
 
 /**
+ * Packages never written to `deno-imports.json`, whatever the options say:
+ * they are provided by your app's import map / package.json. The generated
+ * `handler.js` imports `@marianmeres/demino`, and an `npm:` mapping for it
+ * would load a second demino next to the one your Deno app already uses.
+ */
+export const SKIPPED_PACKAGES: readonly string[] = ["@marianmeres/demino"];
+
+/**
  * Friendly logger shape compatible with `builder.log`.
  * `warn` falls back to `minor` when the Builder doesn't expose it.
  */
@@ -200,6 +208,8 @@ export function buildImportEntry(
  *
  * Never throws on missing data — unresolvable packages are skipped with one
  * aggregated warning, and an empty input produces `{"imports":{}}`.
+ * {@link SKIPPED_PACKAGES} are always left out, even when listed in
+ * `extraSpecifiers`.
  */
 export function emitDenoImports(ctx: {
 	serverDir: string;
@@ -212,7 +222,7 @@ export function emitDenoImports(ctx: {
 	if (opts.enabled === false) return;
 
 	const prefix = opts.versionPrefix ?? "caret";
-	const exclude = new Set(opts.exclude ?? []);
+	const exclude = new Set([...SKIPPED_PACKAGES, ...(opts.exclude ?? [])]);
 	const warn = (m: string) => (ctx.log.warn ?? ctx.log.minor)(m);
 
 	const specifiers = new Set<string>();
