@@ -1,2 +1,5 @@
+# pnpm 12 reads `allowBuilds` and ignores `onlyBuiltDependencies` (kept for pnpm 10)
+allowBuilds:
+  esbuild: true
 onlyBuiltDependencies:
   - esbuild
