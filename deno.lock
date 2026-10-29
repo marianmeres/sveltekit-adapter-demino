@@ -1,16 +1,45 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@marianmeres/clog@^3.21.0": "3.23.0",
+    "jsr:@marianmeres/demino@2.0.0-rc.1": "2.0.0-rc.1",
+    "jsr:@marianmeres/demino@^2.0.0-rc.1": "2.0.0-rc.1",
+    "jsr:@marianmeres/http-utils@^2.12.0": "2.12.0",
+    "jsr:@marianmeres/midware@^1.5.0": "1.5.0",
     "jsr:@marianmeres/npmbuild@^1.16.0": "1.16.0",
+    "jsr:@marianmeres/pubsub@3": "3.0.0",
     "jsr:@marianmeres/release@*": "2.0.0",
+    "jsr:@marianmeres/simple-router@^3.4.0": "3.4.0",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/collections@^1.1.7": "1.1.7",
     "jsr:@std/fs@^1.0.23": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.13",
     "jsr:@std/path@^1.1.4": "1.1.4",
-    "npm:@sveltejs/kit@^2.60.1": "2.60.1_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.55.7__vite@8.0.13_svelte@5.55.7_vite@8.0.13"
+    "npm:@sveltejs/kit@^2.60.1": "2.60.1_@sveltejs+vite-plugin-svelte@7.1.2_svelte@5.55.7_vite@8.0.13",
+    "npm:mrmime@^2.0.1": "2.0.1",
+    "npm:ws@^8.18.0": "8.21.3"
   },
   "jsr": {
+    "@marianmeres/clog@3.23.0": {
+      "integrity": "23d640735af3aacb3c3e651d049d2f43b9426f5dece5264af9c0455d37101bec"
+    },
+    "@marianmeres/demino@2.0.0-rc.1": {
+      "integrity": "cfc15c20753f86576951a1211e256270e94535afe28731013f1ace3f8f50c61f",
+      "dependencies": [
+        "jsr:@marianmeres/clog",
+        "jsr:@marianmeres/http-utils",
+        "jsr:@marianmeres/midware",
+        "jsr:@marianmeres/simple-router",
+        "npm:mrmime",
+        "npm:ws"
+      ]
+    },
+    "@marianmeres/http-utils@2.12.0": {
+      "integrity": "2e80298eb3a75a551aa27f16f34b53042dd6289d872b88abc350b434376bab3e"
+    },
+    "@marianmeres/midware@1.5.0": {
+      "integrity": "0d4b6efbb69a4c75026e2f00c2c69760c8029f402213db1da3dfe0fae4e58f72"
+    },
     "@marianmeres/npmbuild@1.16.0": {
       "integrity": "5631b65d284472d1325ecf829dce22e2df166fa3b754cd3f005c8eccd05ee8f0",
       "dependencies": [
@@ -19,8 +48,17 @@
         "jsr:@std/path"
       ]
     },
+    "@marianmeres/pubsub@3.0.0": {
+      "integrity": "9bc40e60362801663fb23e0c00a353abec7684840b6bea410facba09c083677b"
+    },
     "@marianmeres/release@2.0.0": {
       "integrity": "a0358067f8500edaa795f22f6f962765a7f20edd6d8869c0793f11ee02fb47c0"
+    },
+    "@marianmeres/simple-router@3.4.0": {
+      "integrity": "0066d33ef73a148051b1f3daf60876047803cd993704d0efa69d07a0a30bf9e8",
+      "dependencies": [
+        "jsr:@marianmeres/pubsub"
+      ]
     },
     "@std/assert@1.0.19": {
       "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
@@ -200,7 +238,7 @@
         "acorn"
       ]
     },
-    "@sveltejs/kit@2.60.1_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.55.7__vite@8.0.13_svelte@5.55.7_vite@8.0.13": {
+    "@sveltejs/kit@2.60.1_@sveltejs+vite-plugin-svelte@7.1.2_svelte@5.55.7_vite@8.0.13": {
       "integrity": "sha512-mQjlkNo+rJvpln7V2IGY2j99BqhcFbS4UN0AQNKNYfhBAFZTuCDAdW3a1sgf330mvtNvsBXn3HpAhcmvdJTcIQ==",
       "dependencies": [
         "@standard-schema/spec",
@@ -507,12 +545,16 @@
         "vite"
       ]
     },
+    "ws@8.21.3": {
+      "integrity": "sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw=="
+    },
     "zimmerframe@1.1.4": {
       "integrity": "sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ=="
     }
   },
   "workspace": {
     "dependencies": [
+      "jsr:@marianmeres/demino@^2.0.0-rc.1",
       "jsr:@marianmeres/npmbuild@^1.16.0",
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/fs@^1.0.23",

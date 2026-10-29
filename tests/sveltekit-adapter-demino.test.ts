@@ -1,4 +1,10 @@
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import {
+	assertEquals,
+	assertExists,
+	assertInstanceOf,
+	assertStringIncludes,
+} from "@std/assert";
+import { fromFileUrl, join, toFileUrl } from "@std/path";
 import type { Builder } from "@sveltejs/kit";
 import adapter, { CACHE_DEFAULTS } from "../src/sveltekit-adapter-demino.ts";
 
@@ -113,12 +119,18 @@ async function buildHandlerString(
 	}
 }
 
-Deno.test("generateHandler: read() returns ReadableStream (not Deno.FsFile)", async () => {
+Deno.test("generateHandler: read() returns a web ReadableStream via node:fs", async () => {
 	const src = await buildHandlerString();
-	// Must access `.readable` on the opened file, not return the FsFile directly.
-	assertStringIncludes(src, ".readable");
-	// And it must actually open a file.
-	assertStringIncludes(src, "Deno.open(");
+	// Must open the file and convert the Node stream, not return it directly.
+	assertStringIncludes(src, "createReadStream(");
+	assertStringIncludes(src, "Readable.toWeb(");
+});
+
+Deno.test("generateHandler: output is runtime-portable (no Deno., jsr:, serveDir)", async () => {
+	const src = await buildHandlerString();
+	for (const needle of ["Deno.", "jsr:", "serveDir"]) {
+		assertEquals(src.includes(needle), false, `must not contain "${needle}"`);
+	}
 });
 
 Deno.test("generateHandler: embeds default cacheControl values", async () => {
@@ -162,8 +174,8 @@ Deno.test("generateHandler: uses native HEAD support (no HEAD→GET rewrite)", a
 
 Deno.test("generateHandler: never mutates staticRes.headers", async () => {
 	const src = await buildHandlerString();
-	// Response headers from serveDir() are immutable — any .set/.append/.delete
-	// on staticRes.headers throws at runtime.
+	// Cache-Control goes in through serveStatic's `headers` option; a static
+	// response's headers may be immutable, so .set/.append/.delete could throw.
 	assertEquals(
 		/staticRes\.headers\.(set|append|delete)\b/.test(src),
 		false,
@@ -171,8 +183,131 @@ Deno.test("generateHandler: never mutates staticRes.headers", async () => {
 	);
 });
 
-Deno.test("generateHandler: clones response when Cache-Control applies", async () => {
+Deno.test("generateHandler: applies Cache-Control via serveStatic headers (no clone)", async () => {
 	const src = await buildHandlerString();
-	assertStringIncludes(src, "new Headers(staticRes.headers)");
-	assertStringIncludes(src, "new Response(staticRes.body");
+	assertStringIncludes(src, "serveStatic(req, {");
+	assertStringIncludes(src, "'cache-control'");
+	assertEquals(src.includes("new Response(staticRes.body"), false);
+});
+
+// The generated handler is executed, not just inspected. It lives under the repo's
+// gitignored tmp/ so its bare `@marianmeres/demino` import resolves through this
+// repo's import map; ./server/index.js is replaced by a stub SvelteKit Server.
+const RUNTIME_TMP = fromFileUrl(new URL("../tmp/", import.meta.url));
+
+const STUB_SERVER = `\
+export let initOptions = null;
+export class Server {
+	constructor() {}
+	async init(o) { initOptions = o; }
+	async respond(req, { getClientAddress }) {
+		return new Response('ssr:' + new URL(req.url).pathname + ':' + getClientAddress());
+	}
+}
+`;
+
+async function withGeneratedHandler(
+	opts: Parameters<typeof adapter>[0],
+	fn: (
+		// deno-lint-ignore no-explicit-any
+		handler: (req: Request, info?: any) => Promise<Response>,
+		// deno-lint-ignore no-explicit-any
+		initOptions: any,
+	) => Promise<void>,
+): Promise<void> {
+	await Deno.mkdir(RUNTIME_TMP, { recursive: true });
+	const tmp = await Deno.makeTempDir({
+		dir: RUNTIME_TMP,
+		prefix: "adapter-demino-runtime-",
+	});
+	const out = join(tmp, "build");
+	try {
+		await adapter({ ...opts, out }).adapt(createFakeBuilder(tmp));
+		await Deno.writeTextFile(join(out, "server/index.js"), STUB_SERVER);
+		await Deno.mkdir(join(out, "client/_app/immutable"), { recursive: true });
+		await Deno.writeTextFile(join(out, "client/hello.txt"), "hello");
+		await Deno.writeTextFile(join(out, "client/_app/immutable/x.js"), "export {};");
+		await Deno.writeTextFile(join(out, "client/index.html"), "<p>home</p>");
+
+		const { handler } = await import(toFileUrl(join(out, "handler.js")).href);
+		const stub = await import(toFileUrl(join(out, "server/index.js")).href);
+		await fn(handler, stub.initOptions);
+	} finally {
+		await Deno.remove(tmp, { recursive: true });
+	}
+}
+
+const url = (path: string) => `http://localhost${path}`;
+
+Deno.test("handler.js runtime: init receives env and a working read()", async () => {
+	Deno.env.set("ADAPTER_DEMINO_TEST_ENV", "1");
+	try {
+		await withGeneratedHandler({}, async (_handler, init) => {
+			assertEquals(Object.getPrototypeOf(init.env), Object.prototype);
+			assertEquals(init.env.ADAPTER_DEMINO_TEST_ENV, "1");
+
+			const stream = await init.read("hello.txt");
+			assertInstanceOf(stream, ReadableStream);
+			assertEquals(
+				await new Response(stream as ReadableStream<Uint8Array>).text(),
+				"hello",
+			);
+
+			assertEquals(await init.read("missing.txt"), null);
+			assertEquals(await init.read("_app"), null); // a directory
+		});
+	} finally {
+		Deno.env.delete("ADAPTER_DEMINO_TEST_ENV");
+	}
+});
+
+Deno.test("handler.js runtime: static files, cache-control, HEAD, SSR fallthrough", async () => {
+	await withGeneratedHandler({}, async (handler) => {
+		let res = await handler(new Request(url("/hello.txt")));
+		assertEquals(res.status, 200);
+		assertEquals(await res.text(), "hello");
+		assertExists(res.headers.get("etag"));
+		assertEquals(res.headers.get("cache-control"), CACHE_DEFAULTS.assets);
+
+		res = await handler(new Request(url("/hello.txt"), { method: "HEAD" }));
+		assertEquals(res.status, 200);
+		assertEquals(await res.text(), "");
+		assertEquals(res.headers.get("content-length"), "5");
+
+		res = await handler(new Request(url("/_app/immutable/x.js")));
+		assertEquals(res.status, 200);
+		await res.body?.cancel();
+		assertEquals(res.headers.get("cache-control"), CACHE_DEFAULTS.immutable);
+
+		// "/" is prerendered in the fake builder; served as the directory index.
+		res = await handler(new Request(url("/")));
+		assertEquals(res.status, 200);
+		assertEquals(await res.text(), "<p>home</p>");
+		assertEquals(res.headers.get("cache-control"), CACHE_DEFAULTS.prerendered);
+
+		res = await handler(new Request(url("/old")));
+		assertEquals(res.status, 308);
+		assertEquals(res.headers.get("location"), "/new");
+
+		res = await handler(new Request(url("/missing")), {
+			remoteAddr: { hostname: "1.2.3.4" },
+		});
+		assertEquals(await res.text(), "ssr:/missing:1.2.3.4");
+
+		res = await handler(new Request(url("/missing")));
+		assertEquals(await res.text(), "ssr:/missing:127.0.0.1");
+
+		// Non-GET/HEAD skips static serving even for an existing file.
+		res = await handler(new Request(url("/hello.txt"), { method: "POST" }));
+		assertEquals(await res.text(), "ssr:/hello.txt:127.0.0.1");
+	});
+});
+
+Deno.test("handler.js runtime: cacheControl=false sets no header", async () => {
+	await withGeneratedHandler({ cacheControl: { assets: false } }, async (handler) => {
+		const res = await handler(new Request(url("/hello.txt")));
+		assertEquals(res.status, 200);
+		assertEquals(await res.text(), "hello");
+		assertEquals(res.headers.get("cache-control"), null);
+	});
 });
