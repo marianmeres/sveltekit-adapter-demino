@@ -2,7 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@marianmeres/clog@^3.21.0": "3.23.0",
-    "jsr:@marianmeres/demino@^2.0.0-rc.1": "2.0.0-rc.1",
+    "jsr:@marianmeres/demino@2": "2.0.0",
     "jsr:@marianmeres/http-utils@^2.12.0": "2.12.0",
     "jsr:@marianmeres/midware@^1.5.0": "1.5.0",
     "jsr:@marianmeres/pubsub@3": "3.0.0",
@@ -30,8 +30,8 @@
     "@marianmeres/clog@3.23.0": {
       "integrity": "23d640735af3aacb3c3e651d049d2f43b9426f5dece5264af9c0455d37101bec"
     },
-    "@marianmeres/demino@2.0.0-rc.1": {
-      "integrity": "cfc15c20753f86576951a1211e256270e94535afe28731013f1ace3f8f50c61f",
+    "@marianmeres/demino@2.0.0": {
+      "integrity": "132d026865ddc3d9435d2e4fe06e45beccf45c262ef7748abf07b3a072be1576",
       "dependencies": [
         "jsr:@marianmeres/clog",
         "jsr:@marianmeres/http-utils",
@@ -689,7 +689,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@marianmeres/demino@^2.0.0-rc.1",
+      "jsr:@marianmeres/demino@2",
       "jsr:@std/assert@1",
       "npm:@sveltejs/kit@*",
       "npm:@sveltejs/kit@2"

@@ -180,8 +180,36 @@ The generated `handler.js`:
 
   Minimal manual fallback if you skip the generated file entirely:
   ```json
-  { "imports": { "@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0" } }
+  {
+    "imports": {
+      "@marianmeres/demino": "jsr:@marianmeres/demino@^2",
+      "@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0"
+    }
+  }
   ```
+
+## Breaking changes (2.0.0)
+
+The generated `handler.js` no longer depends on Deno: it serves static files with
+`serveStatic` from `@marianmeres/demino` and uses `node:*` built-ins instead of
+`Deno.*` and `jsr:@std/*`, so it runs on Deno or Node. The adapter's own options
+and exports are unchanged.
+
+- **Your server app must provide `@marianmeres/demino` ≥ 2.0.** demino 1.x has no
+  `serveStatic`, so `handler.js` fails to load against it; a server that ran the
+  handler on plain `Deno.serve()` without demino now needs it as well. Deno: add
+  `"@marianmeres/demino": "jsr:@marianmeres/demino@^2"` to your `deno.json`
+  `imports`. Node: `npm install @marianmeres/demino`. Upgrading demino itself is
+  covered by its
+  [migration guide](https://github.com/marianmeres/demino/blob/master/docs/MIGRATION-2.0.md).
+- **`"importMap": "./build/deno-imports.json"` no longer works on its own.** The
+  file never maps `@marianmeres/demino`, and Deno ignores `"importMap"` once
+  `"imports"` exists. Copy its entries into your `deno.json` `imports` instead
+  (see [Notes](#notes)).
+- **`platform.info` is typed `DeminoServeInfo`.** Under `serve` from
+  `@marianmeres/demino/deno` it is `{ remoteAddr, upgradeWebSocket, raw }`;
+  Deno's own `ServeHandlerInfo` is on `raw`, so code reading other Deno fields
+  (e.g. `platform.info.completed`) reads them from `platform.info.raw`.
 
 ## License
 

@@ -3,7 +3,7 @@
 		"dev": "deno run -A server.ts"
 	},
 	"imports": {
-		"@marianmeres/demino": "jsr:@marianmeres/demino@^2.0.0-rc.1",
+		"@marianmeres/demino": "jsr:@marianmeres/demino@^2.0.0",
 		"@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0",
 		"@sveltejs/kit/internal": "npm:@sveltejs/kit/internal",
 		"@sveltejs/kit/internal/server": "npm:@sveltejs/kit/internal/server",
