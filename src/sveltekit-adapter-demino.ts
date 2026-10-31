@@ -37,9 +37,11 @@ export interface AdapterOptions {
 	cacheControl?: CacheControlOptions;
 
 	/** Emit `build/deno-imports.json` listing every bare npm specifier the
-	 *  SSR bundle references, pinned to the installed version. Consumers merge
-	 *  it into their `deno.json` or point `importMap` at it. Pass `false` to
-	 *  disable, or an object to override defaults. @default true */
+	 *  SSR bundle references, pinned to the installed version. Deno consumers
+	 *  merge its `imports` into their `deno.json` `imports`; it never maps
+	 *  `@marianmeres/demino`, so pointing `importMap` at it alone is not
+	 *  enough. Pass `false` to disable, or an object to override defaults.
+	 *  @default true */
 	denoImports?: boolean | DenoImportsOptions;
 }
 
