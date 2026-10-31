@@ -1,10 +1,15 @@
 # @marianmeres/sveltekit-adapter-demino — Agent Guide
 
 ## Quick Reference
-- **Stack**: Deno, TypeScript, SvelteKit Adapter API
-- **Test**: `deno test` | **Build npm**: `deno task npm:build`
-- **Publish**: `deno task rp` (patch) | `deno task rpm` (minor)
-- **Format**: tabs, 90 char line width, 4 indent (`deno fmt`)
+
+- **Stack**: TypeScript on Node (dev runtime, reference, CI gate), SvelteKit Adapter API,
+  pnpm, Biome. Published to npm only (no JSR). Deno is a _consumer_ runtime of the
+  generated `handler.js`, not a dev runtime.
+- **Install**: `pnpm install` | **Test**: `pnpm test` (`node:test`; `pnpm run test:deno`
+  runs the same suite on Deno) | **Build**: `pnpm run build` (`tsc` → `dist/`)
+- **Gate**: `pnpm run ci` (tsc `--noEmit` + Biome + tests + npm smoke)
+- **Publish**: `pnpm run rp` (patch) | `pnpm run rpm` (minor) — npm only
+- **Format**: `pnpm run format` (Biome: tabs, 90 char line width, double quotes)
 
 ## Project Structure
 ```
@@ -12,17 +17,18 @@ src/
   mod.ts                           — barrel export (re-exports default + named)
   sveltekit-adapter-demino.ts      — adapter + generateHandler() template
   deno-imports.ts                  — deno-imports.json emission (SSR bundle scanner)
-tests/
+tests/                             — node:test + node:assert; runs on Node and on Deno
   sveltekit-adapter-demino.test.ts — adapter tests (incl. a runtime test of handler.js)
   deno-imports.test.ts             — scanner / emission tests
 scripts/
-  build-npm.ts                     — npm build via @marianmeres/npmbuild
+  smoke-npm.mjs                    — packs, installs and exercises the npm tarball
 example/
-  server.ts                        — example server: demino + handler, `serve` from @marianmeres/demino/deno
-  deno.json                        — Deno config with SvelteKit import mappings
+  server.ts                        — example server: demino + handler, `serve` from @marianmeres/demino/node
   sveltekit-app/                   — bare-bones SvelteKit app wired to this adapter
     svelte.config.js               — uses @marianmeres/sveltekit-adapter-demino
-    package.json                   — adapter linked via file:../../.npm-dist
+    package.json                   — adapter linked via link:../.. (repo root → dist/)
+package.json                       — manifest of record: version, scripts, exports → dist/
+tsconfig.json                      — type gate (src + tests); tsconfig.build.json emits src → dist
 ```
 
 ## What This Package Does
@@ -92,10 +98,13 @@ function adapter(options?: AdapterOptions): Adapter
 4. The string template must stay runtime-portable: `node:*`, web standards and
    `@marianmeres/demino` only — no `Deno.*` or `jsr:` (a test asserts both), no `npm:`
    specifiers. The adapter source itself never imports demino.
-5. `@sveltejs/kit` is a **peer dependency** for npm, mapped via `deno.json` imports
-   for Deno.
-6. Build-time deps (`@types/node`, `@sveltejs/kit`) are installed by `npmbuild`
-   during `npm:build` — they are NOT runtime deps.
+5. `@sveltejs/kit` is a **peer dependency**; the adapter imports only its types, so the
+   package has no runtime dependencies. `@marianmeres/demino` is a dev dependency only
+   (the runtime test and the example import it; the adapter source never does).
+6. Erasable-only TS (`erasableSyntaxOnly`, `verbatimModuleSyntax`, `import type`,
+   explicit `.ts` extensions): Node runs `src/` and `tests/` type-stripped and never
+   type-checks, so `pnpm run typecheck` is the only type gate. No `Deno.*` / `Bun.*`
+   calls and no `jsr:` / `npm:` specifiers in the repo's own code.
 
 ## Build Output Structure
 
@@ -128,19 +137,15 @@ When a consumer runs `vite build`, the adapter produces:
 ## Example: Build & Test Flow
 
 ```bash
-# 1. Build the adapter as npm package (from project root)
-deno task npm:build
+# 1. Build the adapter (dist/), then install + build the example SvelteKit app
+#    (example-build.sh). The app links the repo root, so a later adapter rebuild
+#    (`pnpm run build`) needs no reinstall — only `pnpm build` in the app.
+pnpm run example:build
 
-# 2. Install deps in example SvelteKit app
-cd example/sveltekit-app && pnpm install
+# 2. Run the example server (Node, `serve` from @marianmeres/demino/node)
+pnpm run example
 
-# 3. Build the SvelteKit app (generates build/handler.js)
-pnpm build
-
-# 4. Run the example server (Deno, `serve` from @marianmeres/demino/deno)
-cd .. && deno run -A server.ts
-
-# 5. Verify:
+# 3. Verify:
 #    http://localhost:9999/         → SvelteKit page
 #    http://localhost:9999/api/hello → {"hello":"world"}
 ```
@@ -148,6 +153,6 @@ cd .. && deno run -A server.ts
 ## Before Making Changes
 
 - Check that `generateHandler()` output stays runtime-portable (Deno and Node)
-- Run `deno test`
-- Run `deno task npm:build` to verify tsc compilation succeeds
-- Test end-to-end: rebuild npm → reinstall in example → `pnpm build` → run server
+- Run `pnpm run ci` (typecheck, Biome, tests, npm smoke)
+- Changed the generated handler? Also `pnpm run test:deno` (Deno-served apps run it)
+- Test end-to-end: `pnpm run example:build` → `pnpm run example`

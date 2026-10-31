@@ -1,0 +1,74 @@
+{
+  "name": "@marianmeres/sveltekit-adapter-demino",
+  "version": "2.0.0",
+  "description": "SvelteKit adapter that builds a web-standard (req, info) => Response handler for @marianmeres/demino 2.0, served on Node or Deno.",
+  "license": "MIT",
+  "author": "Marian Meres",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/mod.js",
+  "types": "dist/mod.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/mod.d.ts",
+      "import": "./dist/mod.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marianmeres/sveltekit-adapter-demino.git"
+  },
+  "bugs": {
+    "url": "https://github.com/marianmeres/sveltekit-adapter-demino/issues"
+  },
+  "homepage": "https://github.com/marianmeres/sveltekit-adapter-demino#readme",
+  "keywords": [
+    "sveltekit",
+    "adapter",
+    "demino",
+    "node",
+    "deno"
+  ],
+  "scripts": {
+    "build": "pnpm run clean && tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "test:watch": "node --test --watch \"tests/**/*.test.ts\"",
+    "test:deno": "deno test -A tests/",
+    "smoke": "pnpm run build && node scripts/smoke-npm.mjs",
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm test && pnpm run smoke",
+    "prepublishOnly": "pnpm run ci && pnpm run build",
+    "release": "npx --yes @marianmeres/release@^2.2.0",
+    "rp": "pnpm run release -y && pnpm publish",
+    "rpm": "pnpm run release minor -y && pnpm publish",
+    "example": "node example/server.ts",
+    "example:build": "bash ./example-build.sh",
+    "example:build-run": "pnpm run example:build && pnpm run example"
+  },
+  "peerDependencies": {
+    "@sveltejs/kit": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@marianmeres/demino": "^2.0.0",
+    "@sveltejs/kit": "^2.60.1",
+    "@types/node": "^24",
+    "typescript": "^7.0.2"
+  }
+}

@@ -6,14 +6,14 @@ Used for testing and demonstrating the adapter.
 ## How it works
 
 - `svelte.config.js` imports the adapter from `@marianmeres/sveltekit-adapter-demino`
-- `package.json` links the adapter locally via `file:../../.npm-dist`
+- `package.json` links the adapter to the repo root via `link:../..` (its `dist/`)
 - `vite build` produces `build/handler.js` which is imported by `../server.ts`
 
 ## Build & Run
 
 ```bash
-# 1. Build the adapter as an npm package (from project root)
-deno task npm:build
+# 1. Build the adapter (from project root)
+pnpm run build
 
 # 2. Install dependencies
 pnpm install
@@ -21,9 +21,11 @@ pnpm install
 # 3. Build the SvelteKit app
 pnpm build
 
-# 4. Run the Deno server (from example/)
-cd .. && deno run -A server.ts
+# 4. Run the Node server (from project root)
+pnpm run example
 ```
+
+Or all of it from the project root: `pnpm run example:build-run`.
 
 Then open:
 - http://localhost:9999/ -- SvelteKit pages
@@ -37,7 +39,8 @@ Then open:
 
 ## Notes
 
-- After changing adapter source, re-run `deno task npm:build` from the project
-  root, then `pnpm install && pnpm build` here to pick up the changes.
-- The Deno server at `../server.ts` composes a demino API (`/api/*`) with the
-  SvelteKit handler (everything else).
+- After changing adapter source, re-run `pnpm run build` from the project root,
+  then `pnpm build` here. The link points at the repo root, so no reinstall is
+  needed.
+- The Node server at `../server.ts` composes a demino API (`/api/*`) with the
+  SvelteKit handler (everything else), served by `@marianmeres/demino/node`.

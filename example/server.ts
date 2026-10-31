@@ -1,5 +1,5 @@
 import { demino, deminoCompose, logListenInfo } from "@marianmeres/demino";
-import { serve } from "@marianmeres/demino/deno";
+import { serve } from "@marianmeres/demino/node";
 import { createServer } from "node:net";
 import process from "node:process";
 import { handler as skHandler } from "./sveltekit-app/build/handler.js";
@@ -42,7 +42,7 @@ async function findAvailablePort(
 
 async function main(): Promise<void> {
 	const options = {
-		port: parseInt(process.env.SERVER_PORT ?? "9999"),
+		port: parseInt(process.env.SERVER_PORT ?? "9999", 10),
 		hostname: process.env.SERVER_HOST || "0.0.0.0",
 	};
 
@@ -61,11 +61,12 @@ async function main(): Promise<void> {
 	const sk = demino();
 	sk.all("/*", skHandler);
 
-	//
+	// No WebSocket routes here, so the optional `ws` peer is not needed.
 	await serve(deminoCompose([api, sk]), {
 		port,
 		hostname,
 		onListen: logListenInfo,
+		webSockets: false,
 	});
 }
 

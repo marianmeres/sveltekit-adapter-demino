@@ -58,8 +58,9 @@ export const CACHE_DEFAULTS: {
  *
  * The adapter generates a `handler.js` file (plus `client/` and `server/` directories)
  * exporting a `(req, info) => Response` handler for
- * {@link https://jsr.io/@marianmeres/demino demino} 2.0 on Deno or Node. The handler
- * imports `serveStatic` from `@marianmeres/demino`, which the consuming app provides.
+ * {@link https://www.npmjs.com/package/@marianmeres/demino demino} 2.0 on Node or Deno.
+ * The handler imports `serveStatic` from `@marianmeres/demino`, which the consuming app
+ * provides.
  *
  * @param options - Adapter configuration.
  * @returns A SvelteKit `Adapter` object.

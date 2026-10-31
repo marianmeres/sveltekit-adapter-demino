@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run the Deno server
-deno task example
+cd "$(dirname "$0")"
+
+# Run the example server (Node, `serve` from @marianmeres/demino/node)
+pnpm run example

@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -51,7 +52,7 @@ export function scanJsFiles(dir: string): string[] {
 	const stack: string[] = [dir];
 	while (stack.length) {
 		const cur = stack.pop()!;
-		let entries;
+		let entries: Dirent[];
 		try {
 			entries = readdirSync(cur, { withFileTypes: true });
 		} catch {
@@ -98,6 +99,7 @@ export function extractSpecifiers(source: string): string[] {
 	for (const re of [RE_STATIC_FROM, RE_SIDE_EFFECT, RE_DYNAMIC]) {
 		re.lastIndex = 0;
 		let m: RegExpExecArray | null;
+		// biome-ignore lint/suspicious/noAssignInExpressions: the canonical exec() loop
 		while ((m = re.exec(stripped)) !== null) out.push(m[1]);
 	}
 	return out;

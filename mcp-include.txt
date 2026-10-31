@@ -1,3 +1,4 @@
-SvelteKit adapter that produces a Deno-compatible handler.js at build time, enabling 
-SvelteKit apps to run on Deno via Demino. Handles static assets, prerendered pages, 
-immutable caching, and SSR fallthrough.
+SvelteKit adapter that produces a web-standard (req, info) => Response handler.js at
+build time, for @marianmeres/demino 2.0 served on Node or Deno. Handles static assets,
+prerendered pages, immutable caching, and SSR fallthrough; emits deno-imports.json for
+Deno servers.

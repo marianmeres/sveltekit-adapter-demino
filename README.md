@@ -1,13 +1,12 @@
 # @marianmeres/sveltekit-adapter-demino
 
 [![NPM](https://img.shields.io/npm/v/@marianmeres/sveltekit-adapter-demino)](https://www.npmjs.com/package/@marianmeres/sveltekit-adapter-demino)
-[![JSR](https://jsr.io/badges/@marianmeres/sveltekit-adapter-demino)](https://jsr.io/@marianmeres/sveltekit-adapter-demino)
 [![License](https://img.shields.io/npm/l/@marianmeres/sveltekit-adapter-demino)](LICENSE)
 
 A SvelteKit adapter that outputs a Web-standard `(req, info) => Response` handler
-for [`@marianmeres/demino`](https://jsr.io/@marianmeres/demino) 2.0 on Deno or
-Node. Mount it in a demino app and serve it through the demino adapter of your
-runtime (`@marianmeres/demino/deno` or `@marianmeres/demino/node`).
+for [`@marianmeres/demino`](https://www.npmjs.com/package/@marianmeres/demino) 2.0
+on Node or Deno. Mount it in a demino app and serve it through the demino adapter of
+your runtime (`@marianmeres/demino/node` or `@marianmeres/demino/deno`).
 
 > **Requires `@marianmeres/demino` ≥ 2.0 at runtime.** The generated handler
 > imports `serveStatic` from it; your server app provides it.
@@ -66,11 +65,11 @@ build/
 
 ## Usage in your server
 
-On Deno:
+On Node (`npm install @marianmeres/demino`):
 
 ```ts
 import { demino, deminoCompose } from '@marianmeres/demino';
-import { serve } from '@marianmeres/demino/deno';
+import { serve } from '@marianmeres/demino/node';
 import { handler as skHandler } from './build/handler.js';
 
 const api = demino('/api');
@@ -83,24 +82,24 @@ sk.all('/*', skHandler);
 await serve(deminoCompose([api, sk]), { port: 8000 });
 ```
 
-`@marianmeres/demino` is a bare specifier here and in `handler.js`, so your
-`deno.json` maps it (e.g. `"@marianmeres/demino": "jsr:@marianmeres/demino@^2"`).
+On Deno, the same code with the Deno adapter:
 
-On Node (`npm install @marianmeres/demino`), the same code with the Node adapter:
-
-```js
+```ts
 import { demino, deminoCompose } from '@marianmeres/demino';
-import { serve } from '@marianmeres/demino/node';
+import { serve } from '@marianmeres/demino/deno';
 import { handler as skHandler } from './build/handler.js';
 
 // ... same apps as above
 await serve(deminoCompose([api, sk]), { port: 8000 });
 ```
 
+`@marianmeres/demino` is a bare specifier here and in `handler.js`, so your
+`deno.json` maps it (e.g. `"@marianmeres/demino": "jsr:@marianmeres/demino@^2"`).
+
 Or if SvelteKit is your only app:
 
 ```ts
-import { serve } from '@marianmeres/demino/deno'; // or '@marianmeres/demino/node'
+import { serve } from '@marianmeres/demino/node'; // or '@marianmeres/demino/deno'
 import { handler } from './build/handler.js';
 
 await serve(handler);
@@ -144,7 +143,7 @@ The generated `handler.js`:
   `remoteAddr` etc. — whatever the runtime adapter provides.
 - The adapter runs in Node.js at build time (it's a Vite plugin). The
   generated `handler.js` uses only web standards, `node:*` built-ins and
-  `@marianmeres/demino`, so it runs on Deno or Node at serve time.
+  `@marianmeres/demino`, so it runs on Node or Deno at serve time.
 - On Node, every package the handler and SvelteKit's SSR bundle import resolves
   from your `node_modules`; nothing else is needed.
 - On Deno, your server needs an import map for the npm packages that SvelteKit's
