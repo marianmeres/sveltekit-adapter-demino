@@ -1,6 +1,6 @@
 {
   "name": "@marianmeres/sveltekit-adapter-demino",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "SvelteKit adapter that builds a web-standard (req, info) => Response handler for @marianmeres/demino 2.0, served on Node or Deno.",
   "license": "MIT",
   "author": "Marian Meres",
