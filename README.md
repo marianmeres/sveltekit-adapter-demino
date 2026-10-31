@@ -20,27 +20,27 @@ npm install -D @marianmeres/sveltekit-adapter-demino
 ```
 
 > The adapter runs at **build time** inside Vite/Node.js. It is not installed via
-> `deno add` — your Deno or Node server only runs the *generated* `handler.js`.
+> `deno add` — your Deno or Node server only runs the _generated_ `handler.js`.
 
 ## Configure
 
 ```js
 // svelte.config.js
-import adapter from '@marianmeres/sveltekit-adapter-demino';
+import adapter from "@marianmeres/sveltekit-adapter-demino";
 
 export default {
-  kit: {
-    adapter: adapter({
-      out: 'build', // default
-      // Cache-Control headers for disk-served static responses.
-      // All values below are defaults — override or set to `false` to disable.
-      cacheControl: {
-        immutable:   'public, immutable, max-age=31536000',          // /_app/immutable/*
-        prerendered: 'public, max-age=600, stale-while-revalidate=86400', // prerendered pages
-        assets:      'public, max-age=86400',                        // unhashed static files
-      },
-    }),
-  },
+	kit: {
+		adapter: adapter({
+			out: "build", // default
+			// Cache-Control headers for disk-served static responses.
+			// All values below are defaults — override or set to `false` to disable.
+			cacheControl: {
+				immutable: "public, immutable, max-age=31536000", // /_app/immutable/*
+				prerendered: "public, max-age=600, stale-while-revalidate=86400", // prerendered pages
+				assets: "public, max-age=86400", // unhashed static files
+			},
+		}),
+	},
 };
 ```
 
@@ -68,16 +68,16 @@ build/
 On Node (`npm install @marianmeres/demino`):
 
 ```ts
-import { demino, deminoCompose } from '@marianmeres/demino';
-import { serve } from '@marianmeres/demino/node';
-import { handler as skHandler } from './build/handler.js';
+import { demino, deminoCompose } from "@marianmeres/demino";
+import { serve } from "@marianmeres/demino/node";
+import { handler as skHandler } from "./build/handler.js";
 
-const api = demino('/api');
-api.get('/hello', () => ({ hello: 'world' }));
+const api = demino("/api");
+api.get("/hello", () => ({ hello: "world" }));
 
 // SvelteKit handles everything that the API doesn't
 const sk = demino();
-sk.all('/*', skHandler);
+sk.all("/*", skHandler);
 
 await serve(deminoCompose([api, sk]), { port: 8000 });
 ```
@@ -85,9 +85,9 @@ await serve(deminoCompose([api, sk]), { port: 8000 });
 On Deno, the same code with the Deno adapter:
 
 ```ts
-import { demino, deminoCompose } from '@marianmeres/demino';
-import { serve } from '@marianmeres/demino/deno';
-import { handler as skHandler } from './build/handler.js';
+import { demino, deminoCompose } from "@marianmeres/demino";
+import { serve } from "@marianmeres/demino/deno";
+import { handler as skHandler } from "./build/handler.js";
 
 // ... same apps as above
 await serve(deminoCompose([api, sk]), { port: 8000 });
@@ -99,8 +99,8 @@ await serve(deminoCompose([api, sk]), { port: 8000 });
 Or if SvelteKit is your only app:
 
 ```ts
-import { serve } from '@marianmeres/demino/node'; // or '@marianmeres/demino/deno'
-import { handler } from './build/handler.js';
+import { serve } from "@marianmeres/demino/node"; // or '@marianmeres/demino/deno'
+import { handler } from "./build/handler.js";
 
 await serve(handler);
 ```
@@ -118,11 +118,11 @@ The generated `handler.js`:
    (`/_app/...`), and prerendered pages. A miss (404/405) falls through to SSR.
    Each hit (200/206/304) gets a `Cache-Control` header based on its category:
 
-   | Category | Path pattern | Default header |
-   |----------|-------------|----------------|
-   | Immutable | `/_app/immutable/*` | `public, immutable, max-age=31536000` |
-   | Prerendered | Pages from SvelteKit's prerender list | `public, max-age=600, stale-while-revalidate=86400` |
-   | Static assets | Everything else (favicon, fonts, images…) | `public, max-age=86400` |
+   | Category      | Path pattern                              | Default header                                      |
+   | ------------- | ----------------------------------------- | --------------------------------------------------- |
+   | Immutable     | `/_app/immutable/*`                       | `public, immutable, max-age=31536000`               |
+   | Prerendered   | Pages from SvelteKit's prerender list     | `public, max-age=600, stale-while-revalidate=86400` |
+   | Static assets | Everything else (favicon, fonts, images…) | `public, max-age=86400`                             |
 
    Override any value via `cacheControl` in adapter options, or set to `false`
    to skip setting the header for that category.
@@ -151,6 +151,7 @@ The generated `handler.js`:
   listing every bare specifier it found, each pinned to the version installed
   in your `node_modules`. Copy its `imports` block into your `deno.json`
   `imports`, next to your own `@marianmeres/demino` entry:
+
   ```jsonc
   // deno.json
   {
@@ -160,6 +161,7 @@ The generated `handler.js`:
     }
   }
   ```
+
   `deno-imports.json` never maps `@marianmeres/demino` — your app's import map
   (or `package.json`) provides it, and an `npm:` mapping would load a second
   demino next to your app's own. So pointing `"importMap"` at the generated
@@ -178,6 +180,7 @@ The generated `handler.js`:
     imports will still error at runtime; no import map can work around that.
 
   Minimal manual fallback if you skip the generated file entirely:
+
   ```json
   {
     "imports": {

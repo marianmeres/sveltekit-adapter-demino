@@ -12,6 +12,7 @@
 - **Format**: `pnpm run format` (Biome: tabs, 90 char line width, double quotes)
 
 ## Project Structure
+
 ```
 src/
   mod.ts                           — barrel export (re-exports default + named)
@@ -39,7 +40,7 @@ for `@marianmeres/demino` 2.0 on Deno or Node.
 **Two execution contexts:**
 1. **Build time** (Node/Vite) — the adapter code itself (`src/`). Uses `node:fs`,
    `@sveltejs/kit` Builder API. Runs inside `vite build`.
-2. **Serve time** (Deno or Node) — the *generated* `handler.js`. Uses web standards,
+2. **Serve time** (Deno or Node) — the _generated_ `handler.js`. Uses web standards,
    `node:*` built-ins, `serveStatic` from `@marianmeres/demino`, SvelteKit's `Server`
    class. Runs under `serve` from `@marianmeres/demino/deno` or `/node` (or any
    `(req, info) => Response` host). `info` is demino's `DeminoServeInfo`.
@@ -125,12 +126,12 @@ When a consumer runs `vite build`, the adapter produces:
   enough — Deno ignores it once `imports` exists, and the file never maps demino):
 ```json
 {
-  "imports": {
-    "@marianmeres/demino": "jsr:@marianmeres/demino@^2",
-    "@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0",
-    "@sveltejs/kit/internal": "npm:@sveltejs/kit/internal",
-    "@sveltejs/kit/internal/server": "npm:@sveltejs/kit/internal/server"
-  }
+	"imports": {
+		"@marianmeres/demino": "jsr:@marianmeres/demino@^2",
+		"@sveltejs/kit": "npm:@sveltejs/kit@^2.0.0",
+		"@sveltejs/kit/internal": "npm:@sveltejs/kit/internal",
+		"@sveltejs/kit/internal/server": "npm:@sveltejs/kit/internal/server"
+	}
 }
 ```
 

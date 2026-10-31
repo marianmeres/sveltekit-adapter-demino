@@ -83,9 +83,7 @@ const RE_DYNAMIC = /(?<![.$_\w`"'])import\s*\(\s*["']([^"']+)["']\s*\)/g;
  * import specifiers remain scannable.
  */
 function stripComments(source: string): string {
-	return source
-		.replace(/\/\/.*$/gm, "")
-		.replace(/\/\*[\s\S]*?\*\//g, "");
+	return source.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 /**
@@ -121,8 +119,9 @@ export function isBareNpmSpecifier(spec: string): boolean {
 	// Must match npm package-name grammar: optional scope, lowercase letters/
 	// digits/`-`/`_`/`.`; no spaces, no `$`, no braces. This catches stray
 	// template-literal fragments (e.g. `${assets}`) the parser may surface.
-	return /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[a-zA-Z0-9._\-/]+)?$/
-		.test(spec);
+	return /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[a-zA-Z0-9._\-/]+)?$/.test(
+		spec,
+	);
 }
 
 /**

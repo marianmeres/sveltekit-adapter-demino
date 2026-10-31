@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import type { Adapter, Builder } from "@sveltejs/kit";
-import { emitDenoImports } from "./deno-imports.ts";
 import type { DenoImportsOptions } from "./deno-imports.ts";
+import { emitDenoImports } from "./deno-imports.ts";
 
 export type { DenoImportsOptions } from "./deno-imports.ts";
 
@@ -81,11 +81,7 @@ export default function adapter(options: AdapterOptions = {}): Adapter {
 		assets: cc.assets ?? CACHE_DEFAULTS.assets,
 	};
 	const denoImportsOptions: DenoImportsOptions | null =
-		denoImports === false
-			? null
-			: denoImports === true
-				? {}
-				: denoImports;
+		denoImports === false ? null : denoImports === true ? {} : denoImports;
 
 	return {
 		name: "adapter-demino",
@@ -131,7 +127,12 @@ export default function adapter(options: AdapterOptions = {}): Adapter {
 				assets: cacheControl.assets || null,
 			});
 
-			const handlerSrc = generateHandler(manifest, redirects, prerenderedPages, ccJson);
+			const handlerSrc = generateHandler(
+				manifest,
+				redirects,
+				prerenderedPages,
+				ccJson,
+			);
 			writeFileSync(`${out}/handler.js`, handlerSrc, "utf-8");
 
 			if (denoImportsOptions) {

@@ -1,7 +1,7 @@
-import { demino, deminoCompose, logListenInfo } from "@marianmeres/demino";
-import { serve } from "@marianmeres/demino/node";
 import { createServer } from "node:net";
 import process from "node:process";
+import { demino, deminoCompose, logListenInfo } from "@marianmeres/demino";
+import { serve } from "@marianmeres/demino/node";
 import { handler as skHandler } from "./sveltekit-app/build/handler.js";
 
 /**
@@ -21,10 +21,7 @@ function isPortAvailable(port: number, host: string): Promise<boolean> {
 /**
  * Find the next available port starting from the given port
  */
-async function findAvailablePort(
-	startPort: number,
-	host: string,
-): Promise<number> {
+async function findAvailablePort(startPort: number, host: string): Promise<number> {
 	let port = startPort;
 	const maxAttempts = 100;
 
@@ -35,9 +32,7 @@ async function findAvailablePort(
 		port++;
 	}
 
-	throw new Error(
-		`Could not find an available port after ${maxAttempts} attempts`,
-	);
+	throw new Error(`Could not find an available port after ${maxAttempts} attempts`);
 }
 
 async function main(): Promise<void> {
